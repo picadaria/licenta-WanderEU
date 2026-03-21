@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 
-// ─── Create User ─────────────────────────────────────────────────────────────
 export const createUser = internalMutation({
   args: {
     clerkId: v.string(),
@@ -34,7 +33,6 @@ export const createUser = internalMutation({
   },
 });
 
-// ─── Update User ──────────────────────────────────────────────────────────────
 export const updateUser = mutation({
   args: {
     name: v.optional(v.string()),
@@ -83,7 +81,6 @@ export const updateUser = mutation({
   },
 });
 
-// ─── Internal Update User (called from webhook) ───────────────────────────────
 export const updateUserInternal = internalMutation({
   args: {
     clerkId: v.string(),
@@ -192,7 +189,7 @@ export const updateUserPublic = mutation({
       .first();
 
     if (!user) {
-      // Create if not exists
+    
       return await ctx.db.insert("users", {
         clerkId: args.clerkId,
         email: args.email ?? "",
@@ -215,7 +212,6 @@ export const updateUserPublic = mutation({
   },
 });
 
-// ─── Complete Onboarding ──────────────────────────────────────────────────────
 export const completeOnboarding = mutation({
   args: {
     isStudent: v.boolean(),

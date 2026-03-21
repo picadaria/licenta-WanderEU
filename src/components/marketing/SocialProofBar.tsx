@@ -1,11 +1,11 @@
 "use client";
+//import React from "react";
 
 const universities = [
   "TU Delft",
-  "Politehnica",
-  "KTH Royal Institute",
-  "Sciences Po",
-  "ETH Zürich",
+  "ASE Bucharest",
+  "University of Bucharest",
+
   "TU München",
   "Sorbonne",
   "University of Amsterdam",

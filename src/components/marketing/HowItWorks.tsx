@@ -16,7 +16,7 @@ const steps = [
           Where do you want to go?
         </p>
         <div className="flex flex-wrap gap-2">
-          {["Barcelona", "Prague", "Lisbon", "Amsterdam", "Vienna", "Porto"].map(
+          {["Barcelona", "Prague", "Lisbon", "Amsterdam", "Vienna", "Bucharest"].map(
             (city) => (
               <span
                 key={city}

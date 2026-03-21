@@ -2,7 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // ─── Users ────────────────────────────────────────────────────────────────
+
   users: defineTable({
     clerkId: v.string(),
     email: v.string(),
@@ -12,7 +12,14 @@ export default defineSchema({
     university: v.optional(v.string()),
     homeCity: v.optional(v.string()),
     homeCountry: v.optional(v.string()),
-    currency: v.string(), // ISO 4217, e.g. "EUR"
+    currency: v.union(
+      v.literal("EUR"),
+      v.literal("RON"),
+      v.literal("HUF"),
+      v.literal("CZK"),
+      v.literal("PLN"),
+      v.literal("SEK")
+    ),
     travelPreferences: v.optional(
       v.object({
         comfortLevel: v.union(
@@ -30,7 +37,7 @@ export default defineSchema({
     .index("by_clerkId", ["clerkId"])
     .index("by_email", ["email"]),
 
-  // ─── Trips ────────────────────────────────────────────────────────────────
+  
   trips: defineTable({
     userId: v.id("users"),
     status: v.union(
@@ -55,10 +62,10 @@ export default defineSchema({
       lat: v.number(),
       lng: v.number(),
     }),
-    startDate: v.string(), // ISO date string
+    startDate: v.string(), 
     endDate: v.string(),
     totalDays: v.number(),
-    budgetTotal: v.number(), // EUR
+    budgetTotal: v.number(), 
     budgetBreakdown: v.object({
       transport: v.number(),
       accommodation: v.number(),
@@ -81,11 +88,10 @@ export default defineSchema({
     .index("by_inviteCode", ["inviteCode"])
     .index("by_isPublic", ["isPublic"]),
 
-  // ─── Trip Days ────────────────────────────────────────────────────────────
   tripDays: defineTable({
     tripId: v.id("trips"),
     dayNumber: v.number(),
-    date: v.string(), // ISO date string
+    date: v.string(), 
     title: v.optional(v.string()),
     notes: v.optional(v.string()),
     weatherForecast: v.optional(
@@ -101,7 +107,6 @@ export default defineSchema({
     .index("by_tripId", ["tripId"])
     .index("by_tripId_dayNumber", ["tripId", "dayNumber"]),
 
-  // ─── Activities ───────────────────────────────────────────────────────────
   activities: defineTable({
     tripDayId: v.id("tripDays"),
     tripId: v.id("trips"),
@@ -127,9 +132,9 @@ export default defineSchema({
         googlePlaceId: v.optional(v.string()),
       })
     ),
-    startTime: v.optional(v.string()), // "HH:mm"
+    startTime: v.optional(v.string()), 
     endTime: v.optional(v.string()),
-    duration: v.optional(v.number()), // minutes
+    duration: v.optional(v.number()), 
     estimatedCost: v.number(),
     actualCost: v.optional(v.number()),
     currency: v.string(),
@@ -149,7 +154,7 @@ export default defineSchema({
     .index("by_tripDayId", ["tripDayId"])
     .index("by_tripId", ["tripId"]),
 
-  // ─── Expenses ─────────────────────────────────────────────────────────────
+  
   expenses: defineTable({
     tripId: v.id("trips"),
     userId: v.id("users"),
@@ -174,7 +179,6 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_category", ["category"]),
 
-  // ─── Trip Members ─────────────────────────────────────────────────────────
   tripMembers: defineTable({
     tripId: v.id("trips"),
     userId: v.id("users"),
@@ -189,7 +193,6 @@ export default defineSchema({
     .index("by_tripId", ["tripId"])
     .index("by_userId", ["userId"]),
 
-  // ─── Chat Messages ────────────────────────────────────────────────────────
   chatMessages: defineTable({
     tripId: v.id("trips"),
     userId: v.optional(v.id("users")),
@@ -204,7 +207,7 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_tripId", ["tripId"]),
 
-  // ─── Student Discounts ────────────────────────────────────────────────────
+  
   studentDiscounts: defineTable({
     city: v.string(),
     country: v.string(),
@@ -221,7 +224,6 @@ export default defineSchema({
     .index("by_city", ["city"])
     .index("by_country", ["country"]),
 
-  // ─── Email Logs ───────────────────────────────────────────────────────────
   emailLogs: defineTable({
     userId: v.id("users"),
     type: v.string(),

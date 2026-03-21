@@ -10,21 +10,6 @@ function getAnthropicClient() {
 
 const SYSTEM_PROMPT = `You are WanderEU's expert EU student travel planner. You create detailed, realistic, budget-conscious travel itineraries for university students travelling within Europe.
 
-## Core Rules
-1. ALL costs must be in EUR. Convert any local prices accurately.
-2. ALWAYS prioritise student discounts (ISIC card, EU student card, NUS, local student IDs). Flag every discount with a "studentDiscount" object.
-3. REALISTIC travel times: include walking, waiting, transit times. Never assume teleportation between sites.
-4. Budget restaurants first: look for student canteens (menses), local markets, supermarkets for picnic lunches, and budget chains.
-5. Include exact opening hours and note when attractions are FREE on certain days/times.
-6. Add a 10% buffer into the total budget for unexpected costs.
-7. Always suggest at least 2 free alternatives per day (parks, free museums, walking tours, city beaches, etc.).
-8. Accommodation: hostels, student dorms, Couchsurfing, budget guesthouses. Never 4-star hotels unless explicitly requested.
-9. Transport: trains, buses, low-cost flights (Ryanair/Wizz/easyJet), city transit passes over taxis.
-10. Group trips: split costs fairly, note shared accommodation savings.
-
-## Output Format
-Return ONLY valid JSON matching this exact structure:
-
 {
   "title": "string",
   "description": "string",
@@ -101,7 +86,6 @@ interface GenerateTripArgs {
   generationPrompt?: string;
 }
 
-// ─── Public Action (called from client) ───────────────────────────────────────
 export const generateTrip = action({
   args: {
     origin: v.object({
@@ -152,7 +136,6 @@ export const generateTrip = action({
   },
 });
 
-// ─── Internal Action (does the actual generation + storage) ───────────────────
 export const generateTripInternal = internalAction({
   args: {
     userId: v.id("users"),
@@ -192,22 +175,21 @@ export const generateTripInternal = internalAction({
     let rawContent: string;
     try {
       const message = await getAnthropicClient().messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 8192,
+        model: "claude-3-5-sonnet-20240620",
+        max_tokens: 2000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],
       });
 
       const textBlock = message.content.find((b) => b.type === "text");
       if (!textBlock || textBlock.type !== "text") {
-        throw new Error("No text response from Claude");
+        throw new Error("Error: No text response from Claude");
       }
       rawContent = textBlock.text;
     } catch (err) {
       throw new Error(`Claude API error: ${String(err)}`);
     }
 
-    // Extract JSON from the response (Claude sometimes wraps in markdown)
     const jsonMatch = rawContent.match(/```json\s*([\s\S]*?)```/) ||
       rawContent.match(/```\s*([\s\S]*?)```/) ||
       [null, rawContent];
@@ -262,7 +244,6 @@ export const generateTripInternal = internalAction({
       throw new Error("Failed to parse Claude's JSON response");
     }
 
-    // Validate budget breakdown sums make sense
     const breakdownTotal = Object.values(parsed.budgetBreakdown).reduce(
       (a, b) => a + b,
       0
@@ -282,7 +263,6 @@ export const generateTripInternal = internalAction({
       other: Math.round(parsed.budgetBreakdown.other * correctionFactor),
     };
 
-    // Create the trip
     const tripId: Id<"trips"> = await ctx.runMutation(
       internal.trips.createInternal,
       {
@@ -304,7 +284,6 @@ export const generateTripInternal = internalAction({
       }
     );
 
-    // Create trip days and activities
     const dayInputs = parsed.days.map((d) => ({
       dayNumber: d.dayNumber,
       date: d.date,
@@ -318,7 +297,6 @@ export const generateTripInternal = internalAction({
       { tripId, days: dayInputs }
     );
 
-    // Create activities for each day
     const allActivities: Array<{
       tripDayId: Id<"tripDays">;
       tripId: Id<"trips">;
@@ -372,7 +350,7 @@ export const generateTripInternal = internalAction({
       const day = parsed.days[i];
       const dayId = dayIds[i];
 
-      for (const act of day.activities) {
+      for (const act of day.activities || []) {
         const actType = validTypes.has(act.type)
           ? (act.type as
               | "transport"
@@ -430,7 +408,6 @@ export const generateTripInternal = internalAction({
   },
 });
 
-// ─── Build User Prompt ─────────────────────────────────────────────────────────
 function buildUserPrompt(args: GenerateTripArgs): string {
   const interests =
     args.preferences.interests.length > 0

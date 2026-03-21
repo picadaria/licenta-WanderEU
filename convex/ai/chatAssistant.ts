@@ -119,11 +119,10 @@ export const chat = action({
       if (messages[0].role === "user") {
         messages[0] = {
           role: "user",
-          content: `[TRIP CONTEXT]\n${tripContext}\n\n[USER NAME]: ${user.name}\n\n---\n\n${
-            typeof messages[0].content === "string"
-              ? messages[0].content
-              : args.message
-          }`,
+          content: `[TRIP CONTEXT]\n${tripContext}\n\n[USER NAME]: ${user.name}\n\n---\n\n${typeof messages[0].content === "string"
+            ? messages[0].content
+            : args.message
+            }`,
         };
       }
     }
@@ -131,7 +130,7 @@ export const chat = action({
     let assistantResponse: string;
     try {
       const response = await getAnthropicClient().messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-3-5-sonnet-20240620",
         max_tokens: 2048,
         system: CHAT_SYSTEM_PROMPT,
         messages,
@@ -220,7 +219,7 @@ function buildTripContext(
       : 0;
 
   const daysSummary = days
-    .slice(0, 5) // First 5 days to keep context manageable
+    .slice(0, 5)
     .map((d) => {
       const dayActs = activities
         .filter((a) => a.tripDayId === (d as { _id?: string } & typeof d)._id)
