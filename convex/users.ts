@@ -245,7 +245,7 @@ export const completeOnboarding = mutation({
       university: args.university,
       homeCity: args.homeCity,
       homeCountry: args.homeCountry,
-      currency: args.currency,
+      currency: args.currency as "EUR" | "RON" | "HUF" | "CZK" | "PLN" | "SEK",
       travelPreferences: args.travelPreferences,
       onboardingCompleted: true,
     });

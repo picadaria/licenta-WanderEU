@@ -7,6 +7,7 @@
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
+    "noEmit": true,
     "paths": {
       "convex/_generated/api": ["./_generated/api"],
       "convex/_generated/api.d.ts": ["./_generated/api.d.ts"],
@@ -17,5 +18,5 @@
     }
   },
   "include": ["./**/*.ts"],
-  "exclude": ["node_modules", "_generated"]
+  "exclude": ["node_modules", "_generated", "**/*.js"]
 }

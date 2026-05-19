@@ -118,7 +118,7 @@ export default function HeroSection() {
               className="flex flex-col sm:flex-row gap-3"
             >
               <Link
-                href="/sign-up"
+                href="/dashboard"
                 className="inline-flex items-center justify-center h-12 px-6 rounded-[6px] bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors duration-200"
               >
                 Plan Your First Trip

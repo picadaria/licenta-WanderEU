@@ -8,7 +8,6 @@ import { api } from "convex/_generated/api";
 import { Tent, Hotel, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
 
 const EU_COUNTRIES = [
   "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czech Republic",
@@ -43,12 +42,12 @@ type TravelStyle = (typeof TRAVEL_STYLES)[number]["id"];
 
 const INTERESTS = [
   "museums", "nightlife", "nature", "food", "history",
-  "art", "beach", "hiking", "shopping", "photography",
+  "art", "beach", "hiking", "shopping", "photography","opera"
 ];
 
 const DIETARY = [
-  "None", "Vegetarian", "Vegan", "Halal",
-  "Kosher", "Gluten-free", "Lactose-free",
+  "None", "Vegetarian", "Vegan", "Pescatarian","Halal",
+  "Kosher", "Gluten-free", "Lactose-free", 
 ];
 
 const TOTAL_STEPS = 4;

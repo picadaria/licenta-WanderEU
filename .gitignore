@@ -46,3 +46,6 @@ convex/*.js
 convex/ai/*.js
 # keep the generated API/server stubs
 !convex/_generated/
+
+# clerk configuration (can include secrets)
+/.clerk/
