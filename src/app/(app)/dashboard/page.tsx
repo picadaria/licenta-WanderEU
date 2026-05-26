@@ -22,7 +22,7 @@ interface Trip {
   status: TripStatus;
   startDate: string;
   endDate: string;
-  destination: string;
+  destination: { city: string; country: string } | string;
   budgetTotal: number;
   actualSpent: number;
   tags?: string[];
@@ -46,7 +46,8 @@ function daysUntil(dateStr: string): number {
 
 export default function DashboardPage() {
   const { user } = useUser();
-  const trips = useQuery(api.trips.listByUser, {}) as Trip[] | undefined;
+  const queryResult = useQuery(api.trips.listByUser, {});
+  const trips = queryResult?.trips as Trip[] | undefined;
 
   const firstName = user?.firstName ?? user?.fullName?.split(" ")[0] ?? "Traveler";
   const greeting = getGreeting();
@@ -67,7 +68,7 @@ export default function DashboardPage() {
   const recentTrips = trips?.filter((t) => t.id !== upcomingTrip?.id) ?? [];
 
   const countriesCount = new Set(
-    trips?.map((t) => t.destination.split(",").pop()?.trim()) ?? []
+    trips?.map((t) => (typeof t.destination === "object" ? (t.destination as { country: string }).country : String(t.destination))) ?? []
   ).size;
 
   const totalSaved =
@@ -194,10 +195,10 @@ export default function DashboardPage() {
 
 // ─── Upcoming hero card ────────────────────────────────────────────────────────
 
-interface Trip {
+interface HeroTrip {
   id: string;
   title: string;
-  destination: string;
+  destination: { city: string; country: string } | string;
   startDate: string;
   endDate: string;
   budgetTotal: number;
@@ -206,7 +207,8 @@ interface Trip {
   tags?: string[];
 }
 
-function UpcomingHeroCard({ trip }: { trip: Trip }) {
+function UpcomingHeroCard({ trip }: { trip: HeroTrip }) {
+  const destName = typeof trip.destination === "object" ? trip.destination.city : trip.destination;
   const days = daysUntil(trip.startDate);
   const budgetPercent =
     trip.budgetTotal > 0
@@ -217,10 +219,10 @@ function UpcomingHeroCard({ trip }: { trip: Trip }) {
     days === 0
       ? "Today!"
       : days === 1
-      ? "Tomorrow"
-      : days > 0
-      ? `in ${days} days`
-      : `${Math.abs(days)} days ago`;
+        ? "Tomorrow"
+        : days > 0
+          ? `in ${days} days`
+          : `${Math.abs(days)} days ago`;
 
   return (
     <div
@@ -234,7 +236,7 @@ function UpcomingHeroCard({ trip }: { trip: Trip }) {
         <div className="flex-1 min-w-0">
           {/* Destination */}
           <p className="font-serif text-3xl md:text-4xl text-text-primary italic truncate">
-            {trip.destination}
+            {destName}
           </p>
           <p className="text-text-secondary text-sm mt-1 truncate">{trip.title}</p>
 
@@ -272,8 +274,8 @@ function UpcomingHeroCard({ trip }: { trip: Trip }) {
               budgetPercent >= 90
                 ? "bg-error"
                 : budgetPercent >= 70
-                ? "bg-warning"
-                : "bg-success"
+                  ? "bg-warning"
+                  : "bg-success"
             )}
             style={{ width: `${budgetPercent}%` }}
           />

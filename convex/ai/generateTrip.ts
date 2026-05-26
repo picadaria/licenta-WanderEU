@@ -10,6 +10,10 @@ function getAnthropicClient() {
 
 const SYSTEM_PROMPT = `You are WanderEU's expert EU student travel planner. You create detailed, realistic, budget-conscious travel itineraries for university students travelling within Europe.
 
+You MUST respond with ONLY a valid JSON object — no explanation, no markdown, no code fences, just raw JSON.
+
+The JSON must follow this exact structure:
+
 {
   "title": "string",
   "description": "string",
@@ -57,16 +61,9 @@ const SYSTEM_PROMPT = `You are WanderEU's expert EU student travel planner. You 
       ]
     }
   ],
-  "travelTips": ["string"],
-  "packingList": ["string"],
-  "emergencyInfo": {
-    "localEmergencyNumber": "string",
-    "nearestHospital": "string",
-    "embassyPhone": "string"
-  }
 }
 
-Be thorough, specific, and practical. Use real place names, realistic prices, and genuine student travel wisdom.`;
+Use real place names and realistic prices. Keep descriptions short. Max 4 activities per day.`;
 
 interface GenerateTripArgs {
   origin: { city: string; country: string; lat: number; lng: number };
@@ -122,8 +119,20 @@ export const generateTrip = action({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const user = await ctx.runQuery(api.users.getCurrentUser);
-    if (!user) throw new Error("User not found");
+    let user = await ctx.runQuery(api.users.getUser, {
+      clerkId: identity.subject,
+    });
+
+    if (!user) {
+      await ctx.runMutation(api.users.createUserPublic, {
+        clerkId: identity.subject,
+        email: identity.email ?? "",
+        name: identity.name ?? "Traveler",
+        imageUrl: identity.pictureUrl ?? undefined,
+      });
+      user = await ctx.runQuery(api.users.getUser, { clerkId: identity.subject });
+      if (!user) throw new Error("Failed to create user");
+    }
 
     const result = await ctx.runAction(internal.ai.generateTrip.generateTripInternal, {
       ...args,
@@ -175,8 +184,8 @@ export const generateTripInternal = internalAction({
     let rawContent: string;
     try {
       const message = await getAnthropicClient().messages.create({
-        model: "claude-3-5-sonnet-20240620",
-        max_tokens: 2000,
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 8192,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],
       });
@@ -190,9 +199,18 @@ export const generateTripInternal = internalAction({
       throw new Error(`Claude API error: ${String(err)}`);
     }
 
-    const jsonMatch = rawContent.match(/```json\s*([\s\S]*?)```/) ||
-      rawContent.match(/```\s*([\s\S]*?)```/) ||
-      [null, rawContent];
+    // Extract JSON: try code fences first, then bare braces
+    let jsonString: string = rawContent.trim();
+    const fenceMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) {
+      jsonString = fenceMatch[1].trim();
+    } else {
+      const firstBrace = rawContent.indexOf("{");
+      const lastBrace = rawContent.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        jsonString = rawContent.slice(firstBrace, lastBrace + 1);
+      }
+    }
 
     let parsed: {
       title: string;
@@ -239,9 +257,9 @@ export const generateTripInternal = internalAction({
     };
 
     try {
-      parsed = JSON.parse(jsonMatch[1]?.trim() ?? rawContent.trim());
+      parsed = JSON.parse(jsonString);
     } catch {
-      throw new Error("Failed to parse Claude's JSON response");
+      throw new Error(`Failed to parse JSON. Start: ${rawContent.slice(0, 200)} ... End: ${rawContent.slice(-200)}`);
     }
 
     const breakdownTotal = Object.values(parsed.budgetBreakdown).reduce(
@@ -437,7 +455,7 @@ INTERESTS: ${interests}
 ${dietary}
 ${groupNote}${customNote}
 
-Generate a complete, day-by-day itinerary. Include the outbound journey from ${args.origin.city} on Day 1 and the return journey on Day ${args.totalDays}. Be specific about transport (exact train/bus/flight options with prices), accommodation (real hostels/guesthouses with realistic prices), meals (specific restaurants or food markets), and attractions (with opening hours, entry fees, and any student discounts).
+Generate a day-by-day itinerary. Include outbound travel on Day 1 and return on Day ${args.totalDays}. Max 4 activities per day. Keep all string fields concise (under 20 words each). Omit travelTips, packingList, and emergencyInfo fields entirely.
 
-Return only the JSON object as specified.`;
+Return ONLY the raw JSON object, no markdown, no code fences.`;
 }

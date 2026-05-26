@@ -18,6 +18,7 @@ import { Play, Share2, Download, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import "leaflet/dist/leaflet.css";
 
 const PIE_COLORS = ["#E8553A", "#C4841D", "#2D7A4F", "#3B6EC4", "#9C9C93"];
 
@@ -40,98 +41,67 @@ export default function OverviewPage() {
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<unknown>(null);
-  const [mapError, setMapError] = useState(false);
   const [startingTrip, setStartingTrip] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // ── Init Mapbox ────────────────────────────────────────────────────────
+  // ── Init Leaflet map ───────────────────────────────────────────────────
   useEffect(() => {
-    if (!trip || !activities || mapInstanceRef.current || !mapRef.current) {
-      return;
-    }
+    if (!trip || !activities || !mapRef.current) return;
 
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!token) {
-      setMapError(true);
-      return;
-    }
+    type ActWithLocation = { location?: { lat?: number; lng?: number }; title: string };
+    const allLocations = (activities as ActWithLocation[])
+      .filter((a) => a.location?.lat && a.location?.lng)
+      .map((a) => ({
+        lat: a.location!.lat as number,
+        lng: a.location!.lng as number,
+        title: a.title,
+      }));
 
-    let map: unknown = null;
+    const centerLat = trip.destination.lat;
+    const centerLng = trip.destination.lng;
+    let cancelled = false;
 
     async function initMap() {
-      try {
-        const mapboxgl = (await import("mapbox-gl")).default;
+      const L = (await import("leaflet")).default;
 
-        (mapboxgl as { accessToken: string }).accessToken = token!;
+      if (cancelled || !mapRef.current) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((mapRef.current as any)._leaflet_id) return;
 
-        type ActWithLocation = { location?: { lat?: number; lng?: number }; title: string };
-        const allLocations = (activities as ActWithLocation[] ?? [])
-          .filter((a) => a.location?.lat && a.location?.lng)
-          .map((a) => ({
-            lng: a.location!.lng as number,
-            lat: a.location!.lat as number,
-            title: a.title,
-          }));
+      // Fix default marker icon paths broken by bundlers
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      });
 
-        const centerLng = trip!.destination.lng;
-        const centerLat = trip!.destination.lat;
+      const map = L.map(mapRef.current).setView(
+        [centerLat, centerLng],
+        allLocations.length > 0 ? 12 : 13
+      );
+      mapInstanceRef.current = map;
 
-        type MapboxMap = {
-          on: (event: string, cb: () => void) => void;
-          remove: () => void;
-        };
-        type MapboxMarker = {
-          setLngLat: (coords: [number, number]) => MapboxMarker;
-          addTo: (map: MapboxMap) => MapboxMarker;
-        };
-        type MapboxPopup = {
-          setHTML: (html: string) => MapboxPopup;
-          offset?: number;
-        };
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors",
+        maxZoom: 19,
+      }).addTo(map);
 
-        const mapInstance = new (
-          mapboxgl as unknown as {
-            Map: new (opts: object) => MapboxMap;
-          }
-        ).Map({
-          container: mapRef.current!,
-          style: "mapbox://styles/mapbox/light-v11",
-          center: [centerLng, centerLat],
-          zoom: allLocations.length > 0 ? 11 : 12,
-        });
-
-        mapInstanceRef.current = mapInstance;
-        map = mapInstance;
-
-        mapInstance.on("load", () => {
-          allLocations.forEach(({ lng, lat, title }: { lng: number; lat: number; title: string }) => {
-            const el = document.createElement("div");
-            el.className =
-              "w-3 h-3 rounded-full bg-accent border-2 border-white shadow";
-
-            const popup = new (
-              mapboxgl as unknown as { Popup: new (opts: object) => MapboxPopup }
-            ).Popup({ offset: 16 }).setHTML(
-              `<span style="font-size:12px;font-family:sans-serif">${title}</span>`
-            );
-
-            new (
-              mapboxgl as unknown as { Marker: new (el: HTMLElement) => MapboxMarker }
-            ).Marker(el)
-              .setLngLat([lng, lat])
-              .addTo(mapInstance);
-          });
-        });
-      } catch {
-        setMapError(true);
-      }
+      allLocations.forEach(({ lat, lng, title }) => {
+        L.marker([lat, lng])
+          .addTo(map)
+          .bindPopup(`<span style="font-size:12px">${title}</span>`);
+      });
     }
 
     initMap();
 
     return () => {
-      if (map && (map as { remove?: () => void }).remove) {
-        (map as { remove: () => void }).remove();
+      cancelled = true;
+      if (mapInstanceRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (mapInstanceRef.current as any).remove();
         mapInstanceRef.current = null;
       }
     };
@@ -181,12 +151,8 @@ export default function OverviewPage() {
       value: value as number,
     }));
 
-  const startStr = trip.startDate
-    ? format(new Date(trip.startDate), "d MMM yyyy")
-    : "—";
-  const endStr = trip.endDate
-    ? format(new Date(trip.endDate), "d MMM yyyy")
-    : "—";
+  const startStr = trip.startDate ? format(new Date(trip.startDate), "d MMM yyyy") : "—";
+  const endStr = trip.endDate ? format(new Date(trip.endDate), "d MMM yyyy") : "—";
 
   const daysUntil =
     trip.startDate && trip.status === "planned"
@@ -269,32 +235,12 @@ export default function OverviewPage() {
       <div className="rounded-[8px] border border-border-subtle overflow-hidden">
         <div className="px-4 py-3 border-b border-border-subtle flex items-center gap-2">
           <MapPin size={14} className="text-text-tertiary" />
-          <span className="text-sm font-medium text-text-primary">
-            Trip Map
-          </span>
+          <span className="text-sm font-medium text-text-primary">Trip Map</span>
           <span className="text-xs text-text-tertiary ml-auto">
             {activities.filter((a: { location?: { lat?: number } }) => a.location?.lat).length} locations
           </span>
         </div>
-
-        {mapError ? (
-          <div className="h-[280px] md:h-[400px] bg-bg-secondary flex flex-col items-center justify-center gap-3 text-text-tertiary">
-            <MapPin size={32} className="opacity-40" />
-            <div className="text-center">
-              <p className="text-sm font-medium text-text-secondary">
-                Map preview
-              </p>
-              <p className="text-xs mt-0.5">
-                Add NEXT_PUBLIC_MAPBOX_TOKEN to enable maps
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div
-            ref={mapRef}
-            className="h-[280px] md:h-[400px] w-full bg-bg-secondary"
-          />
-        )}
+        <div ref={mapRef} className="h-[280px] md:h-[400px] w-full bg-bg-secondary" />
       </div>
 
       {/* ── Budget Breakdown Pie ─────────────────────────────── */}
@@ -395,7 +341,7 @@ export default function OverviewPage() {
         </button>
 
         <button
-          onClick={() => window.print()}
+          onClick={() => router.push(`/trip/${tripId}/itinerary?print=1`)}
           className={cn(
             "flex flex-col items-center gap-2 p-4 rounded-[8px] border transition-colors",
             "bg-bg-primary border-border-default text-text-primary hover:bg-bg-secondary"

@@ -250,14 +250,6 @@ function FilterSidebar({ filters, onChange, onClose }: FilterSidebarProps) {
 
       <div className="flex flex-col gap-2 mt-auto">
         <button
-          className={cn(
-            "w-full h-9 rounded-[6px] bg-accent text-white text-sm font-medium",
-            "hover:bg-accent-hover transition-colors"
-          )}
-        >
-          Apply Filters
-        </button>
-        <button
           onClick={clear}
           className="w-full text-sm text-text-secondary hover:text-text-primary transition-colors"
         >
@@ -346,13 +338,17 @@ export default function ExplorePage() {
   const publicTrips = useQuery(api.trips.listPublic, { limit: 6 });
 
   const filteredDestinations = useMemo(() => {
-    if (!search.trim()) return POPULAR_DESTINATIONS;
-    const q = search.toLowerCase();
-    return POPULAR_DESTINATIONS.filter(
-      (d) =>
-        d.city.toLowerCase().includes(q) || d.country.toLowerCase().includes(q)
-    );
-  }, [search]);
+    const q = search.toLowerCase().trim();
+    const min = filters.budgetMin ? parseInt(filters.budgetMin, 10) : null;
+    const max = filters.budgetMax ? parseInt(filters.budgetMax, 10) : null;
+
+    return POPULAR_DESTINATIONS.filter((d) => {
+      if (q && !d.city.toLowerCase().includes(q) && !d.country.toLowerCase().includes(q)) return false;
+      if (min !== null && !isNaN(min) && d.from < min) return false;
+      if (max !== null && !isNaN(max) && d.from > max) return false;
+      return true;
+    });
+  }, [search, filters.budgetMin, filters.budgetMax]);
 
   return (
     <div className="flex min-h-screen bg-bg-primary">

@@ -43,13 +43,13 @@ function CityCombobox({
 
   const filtered =
     query.length === 0
-      ? EU_DESTINATIONS.filter((d) => d.city !== excludeCity).slice(0, 8)
+      ? EU_DESTINATIONS.filter((d) => d.city !== excludeCity)
       : EU_DESTINATIONS.filter(
           (d) =>
             d.city !== excludeCity &&
             (d.city.toLowerCase().includes(query.toLowerCase()) ||
               d.country.toLowerCase().includes(query.toLowerCase()))
-        ).slice(0, 10);
+        );
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -185,6 +185,14 @@ export function WhereWhenStep({ data, onChange, homeCity }: WhereWhenStepProps) 
   const homeCityDest = homeCity
     ? EU_DESTINATIONS.find((d) => d.city.toLowerCase() === homeCity.toLowerCase()) ?? null
     : null;
+
+  // Sync home city into state so validation passes
+  useEffect(() => {
+    if (!data.origin && homeCityDest) {
+      onChange({ ...data, origin: homeCityDest });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeCityDest]);
 
   const handleChange = useCallback(
     (patch: Partial<WhereWhenData>) => {

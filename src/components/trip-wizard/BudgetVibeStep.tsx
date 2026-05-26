@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Tent, Hotel, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -73,12 +74,20 @@ interface BudgetSegment {
   colorHex: string;
 }
 
-function getBudgetSegments(budget: number): BudgetSegment[] {
+const STYLE_PERCENTS: Record<string, [number, number, number, number]> = {
+  backpacker: [25, 35, 25, 15],
+  "mid-range": [40, 25, 20, 15],
+  comfortable: [50, 20, 20, 10],
+  default: [40, 25, 20, 15],
+};
+
+function getBudgetSegments(budget: number, style: string | null): BudgetSegment[] {
+  const [acc, trp, food, act] = STYLE_PERCENTS[style ?? "default"] ?? STYLE_PERCENTS.default;
   return [
-    { label: "Accommodation", percent: 40, color: "bg-[#3B6EC4]", colorHex: "#3B6EC4" },
-    { label: "Transport", percent: 25, color: "bg-[#2D7A4F]", colorHex: "#2D7A4F" },
-    { label: "Food", percent: 20, color: "bg-[#C4841D]", colorHex: "#C4841D" },
-    { label: "Activities", percent: 15, color: "bg-[#9C6EC4]", colorHex: "#9C6EC4" },
+    { label: "Accommodation", percent: acc, color: "bg-[#3B6EC4]", colorHex: "#3B6EC4" },
+    { label: "Transport", percent: trp, color: "bg-[#2D7A4F]", colorHex: "#2D7A4F" },
+    { label: "Food", percent: food, color: "bg-[#C4841D]", colorHex: "#C4841D" },
+    { label: "Activities", percent: act, color: "bg-[#9C6EC4]", colorHex: "#9C6EC4" },
   ].map((seg) => ({
     ...seg,
     amount: Math.round((budget * seg.percent) / 100),
@@ -86,6 +95,12 @@ function getBudgetSegments(budget: number): BudgetSegment[] {
 }
 
 export function BudgetVibeStep({ data, onChange }: BudgetVibeStepProps) {
+  const [inputValue, setInputValue] = useState(String(data.budget));
+
+  useEffect(() => {
+    setInputValue(String(data.budget));
+  }, [data.budget]);
+
   function patchData(patch: Partial<BudgetVibeData>) {
     onChange({ ...data, ...patch });
   }
@@ -112,13 +127,12 @@ export function BudgetVibeStep({ data, onChange }: BudgetVibeStepProps) {
     }
   }
 
-  const segments = getBudgetSegments(data.budget);
+  const segments = getBudgetSegments(data.budget, data.travelStyle);
   const sliderPercent = ((data.budget - BUDGET_MIN) / (BUDGET_MAX - BUDGET_MIN)) * 100;
 
-  function handleBudgetInput(val: string) {
-    const num = parseInt(val, 10);
-    if (isNaN(num)) return;
-    const clamped = Math.min(Math.max(num, BUDGET_MIN), BUDGET_MAX);
+  function handleBudgetBlur() {
+    const num = parseInt(inputValue, 10);
+    const clamped = isNaN(num) ? BUDGET_MIN : Math.min(Math.max(num, BUDGET_MIN), BUDGET_MAX);
     patchData({ budget: clamped });
   }
 
@@ -139,11 +153,12 @@ export function BudgetVibeStep({ data, onChange }: BudgetVibeStepProps) {
             <span className="text-sm text-text-tertiary font-mono">€</span>
             <input
               type="number"
-              value={data.budget}
+              value={inputValue}
               min={BUDGET_MIN}
               max={BUDGET_MAX}
               step={10}
-              onChange={(e) => handleBudgetInput(e.target.value)}
+              onChange={(e) => setInputValue(e.target.value)}
+              onBlur={handleBudgetBlur}
               className="w-20 text-right text-sm font-mono font-semibold text-text-primary bg-bg-secondary border border-border-default rounded-[6px] px-2 py-1 outline-none focus:border-accent transition-colors"
             />
           </div>

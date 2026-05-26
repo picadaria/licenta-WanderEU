@@ -136,3 +136,11 @@ body {
   background: var(--accent-light);
   color: var(--text-primary);
 }
+
+@media print {
+  nav, aside, header, footer,
+  [class*="MobileNav"], [class*="Sidebar"],
+  button, [role="button"] { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .rounded-\[8px\] { border: 1px solid #ddd !important; }
+}

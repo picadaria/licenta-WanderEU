@@ -3,8 +3,8 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "convex/_generated/api";
 import type { Id } from "convex/_generated/dataModel";
-import { useParams } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -583,9 +583,9 @@ function ActivityModal({
       const location =
         form.locationName.trim()
           ? {
-              name: form.locationName.trim(),
-              address: form.locationAddress.trim() || undefined,
-            }
+            name: form.locationName.trim(),
+            address: form.locationAddress.trim() || undefined,
+          }
           : undefined;
 
       if (editingActivity) {
@@ -838,11 +838,20 @@ function ActivityModal({
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function ItineraryPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const tripId = params.tripId as Id<"trips">;
 
   const days = useQuery(api.tripDays.listByTrip, { tripId });
   const activities = useQuery(api.activities.listByTrip, { tripId });
   const reorderActivities = useMutation(api.activities.reorder);
+
+  // Auto-print when navigated from Download PDF button
+  useEffect(() => {
+    if (searchParams.get("print") === "1" && days && activities) {
+      const t = setTimeout(() => window.print(), 500);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams, days, activities]);
 
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
@@ -993,8 +1002,21 @@ export default function ItineraryPage() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
+        {/* ── Print: all days stacked ────────────────────────── */}
+        <div className="hidden print:block space-y-6">
+          {sortedDays.map((day) => (
+            <DayColumn
+              key={`print-${day._id}`}
+              day={day as TripDay}
+              activities={activitiesByDay(day._id as Id<"tripDays">)}
+              onSelectActivity={() => { }}
+              onAddActivity={() => { }}
+            />
+          ))}
+        </div>
+
         {/* ── Mobile: single day with day selector ───────────── */}
-        <div className="md:hidden flex flex-col gap-4">
+        <div className="md:hidden print:hidden flex flex-col gap-4">
           {/* Day selector tabs */}
           <div className="flex items-center gap-2">
             <button
@@ -1073,7 +1095,7 @@ export default function ItineraryPage() {
             <div className="rotate-1 scale-105 shadow-lg">
               <ActivityCardInner
                 activity={getActiveActivity()!}
-                onSelect={() => {}}
+                onSelect={() => { }}
               />
             </div>
           )}

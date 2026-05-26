@@ -1,22 +1,25 @@
 {
+  /* This TypeScript project config describes the environment that
+   * Convex functions run in and is used to typecheck them.
+   * You can modify it, but some settings are required to use Convex.
+   */
   "compilerOptions": {
-    "target": "ESNext",
-    "lib": ["ESNext"],
-    "module": "ESNext",
+    /* These settings are not required by Convex and can be modified. */
+    "allowJs": true,
+    "strict": true,
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
-    "strict": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    "paths": {
-      "convex/_generated/api": ["./_generated/api"],
-      "convex/_generated/api.d.ts": ["./_generated/api.d.ts"],
-      "convex/_generated/dataModel": ["./_generated/dataModel"],
-      "convex/_generated/dataModel.d.ts": ["./_generated/dataModel.d.ts"],
-      "convex/_generated/server": ["./_generated/server"],
-      "convex/_generated/server.d.ts": ["./_generated/server.d.ts"]
-    }
+    "allowSyntheticDefaultImports": true,
+
+    /* These compiler options are required by Convex */
+    "target": "ESNext",
+    "lib": ["ES2021", "dom"],
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "isolatedModules": true,
+    "noEmit": true
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["node_modules", "_generated", "**/*.js"]
+  "include": ["./**/*"],
+  "exclude": ["./_generated"]
 }
